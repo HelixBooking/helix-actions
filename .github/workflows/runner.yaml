@@ -19,16 +19,6 @@ on:
         required: true
         type: string
 
-    secrets:
-      token:
-        required: true
-      artifact_registry_creds:
-        required: true
-      zone:
-        required: true
-      gcloud_project_id:
-        required: true
-
 jobs:
   generate_registration_token:
     name: generate_registration_token
@@ -37,8 +27,16 @@ jobs:
       registration_token: ${{ steps.generate-token.outputs.registration_token }}
     steps:
       - id: generate-token
-        run|-
-        echo "::setoutput name=registration_token::$(curl -X POST -H \"Accept: application/vnd.github+json\" -H \"Authorization: token ${{ secrets.token }}\" https://api.github.com/orgs/HelixBooking/actions/runners/registration-token | jq .token)"
+        run: |-
+          export REGISTRATION_TOKEN=$(curl -X POST -H 'Accept: application/vnd.github+json' -H 'Authorization: token ${{ secrets.GH_PAT }}' https://api.github.com/orgs/HelixBooking/actions/runners/registration-token | jq .token)
+
+      - name: Check Registration Token
+        run: |-
+          echo $REGISTRATION_TOKEN
+
+      - name: Set Outputs
+        run: |-
+          echo "::setoutput name=registration_token::$REGISTRATION_TOKEN"
 
   start_runner:
     name: Start Helix Runner
@@ -48,12 +46,12 @@ jobs:
       - name: 'Authenticate to GKE'
         run: |-
           cd ${HOME}
-          echo "${{ secrets.artifact_registry_credentials }}" | base64 -d > "./gcloud.json"
+          echo "${{ secrets.ARTIFACT_REGISTRY_CREDENTIALS }}" | base64 -d > "./gcloud.json"
           gcloud auth activate-service-account --key-file="./gcloud.json"
       - run: |-
           gcloud container clusters get-credentials helix \
-          --zone ${{ secrets.zone }} \
-          --project ${{ secrets.gcloud_project_id }}
+          --zone us-east1 \
+          --project ${{ secrets.GCLOUD_PROJECT_ID }}
 
       - uses: actions/checkout@v3
         with:
