@@ -12,7 +12,7 @@ on:
         description: 'The deployment file path within @yaml_repo.'
         required: false
         type: string
-        default: './deployment.yaml'
+        default: 'deployment.yaml'
 
       workflow_run_id:
         description: 'The workflow run ID of the calling workflow.'
