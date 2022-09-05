@@ -59,6 +59,6 @@ jobs:
           ref: main    
           token: ${{ secrets.GH_PAT }}
 
-      - run: sed 's/RUNNER_NAME/helix-runner-${{ inputs.workflow_run_id }}/' deployment.yaml
-      - run: sed 's/GITHUB_REGISTRATION_TOKEN/ ${{ needs.generate_registration_token.outputs.registration_token }}/' deployment.yaml
+      - run: sed 's/GH_RUNNER/helix-runner-${{ inputs.workflow_run_id }}/' deployment.yaml
+      - run: sed 's/GITHUB_REGISTRATION_TOKEN/${{ needs.generate_registration_token.outputs.registration_token }}/' deployment.yaml
       - run: kubectl apply -f ${{ inputs.deployment_yaml_path }}
