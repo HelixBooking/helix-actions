@@ -20,29 +20,38 @@ on:
         type: string
 
 jobs:
+  print_inputs:
+    name: Print Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Yaml Repo
+        run: echo ${{ inputs.yaml_repo }}
+      - name: Deployment Yaml Path
+        run: echo ${{ inputs.deployment_yaml_path }}
+      - name: Workflow Run ID
+        run: echo ${{ inputs.workflow_run_id }}
+
   generate_registration_token:
     name: generate_registration_token
+    needs: print_inputs
     runs-on: ubuntu-latest
     outputs:
-      registration_token: ${{ steps.generate-token.outputs.registration_token }}
+      registration_token: ${{ steps.generate-token.outputs.rt }}
     steps:
       - id: generate-token
         run: |-
           export REGISTRATION_TOKEN=$(curl -X POST -H 'Accept: application/vnd.github+json' -H 'Authorization: token ${{ secrets.GH_PAT }}' https://api.github.com/orgs/HelixBooking/actions/runners/registration-token | jq .token)
-
-      - name: Check Registration Token
-        run: |-
           echo $REGISTRATION_TOKEN
-
-      - name: Set Outputs
-        run: |-
-          echo "::setoutput name=registration_token::$REGISTRATION_TOKEN"
+          echo "::set-output name=rt::$REGISTRATION_TOKEN"
 
   start_runner:
     name: Start Helix Runner
     runs-on: ubuntu-latest
     needs: generate_registration_token
     steps:
+      - name: Print Inputs
+        run: echo ${{ needs.generate_registration_token.outputs.registration_token }}
+
       - name: 'Authenticate to GKE'
         run: |-
           cd ${HOME}
@@ -59,7 +68,12 @@ jobs:
           ref: main    
           token: ${{ secrets.GH_PAT }}
 
-      - run: sed 's/GH_RUNNER/helix-runner-${{ inputs.workflow_run_id }}/' deployment.yaml
-      - run: sed 's/GITHUB_REGISTRATION_TOKEN/${{ needs.generate_registration_token.outputs.registration_token }}/' deployment.yaml
-      - run: kubectl config set-context --current --namespace=helix-runners
-      - run: kubectl apply -f ${{ inputs.deployment_yaml_path }} -n helix-runners
+      - run: |-
+          export WORKFLOW_RUN_ID=${{ inputs.workflow_run_id }}
+          export REGISTRATION_TOKEN=${{ needs.generate_registration_token.outputs.registration_token }}
+          echo $WORKFLOW_RUN_ID
+          echo $REGISTRATION_TOKEN
+          sed -i -e "s/GH_RUNNER/helix-runner-$WORKFLOW_RUN_ID/" -e "s/GITHUB_REGISTRATION_TOKEN/$REGISTRATION_TOKEN/" ${{ inputs.deployment_yaml_path }}
+          cat ${{ inputs.deployment_yaml_path }}
+          kubectl config set-context --current --namespace=helix-runners
+          kubectl apply -f ${{ inputs.deployment_yaml_path }} -n helix-runners
