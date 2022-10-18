@@ -58,8 +58,8 @@ jobs:
           echo "${{ secrets.ARTIFACT_REGISTRY_CREDENTIALS }}" | base64 -d > "./gcloud.json"
           gcloud auth activate-service-account --key-file="./gcloud.json"
       - run: |-
-          gcloud container clusters get-credentials helix \
-          --zone us-east1 \
+          gcloud container clusters get-credentials helix-runners \
+          --zone us-central1-c \
           --project ${{ secrets.GCLOUD_PROJECT_ID }}
 
       - uses: actions/checkout@v3
